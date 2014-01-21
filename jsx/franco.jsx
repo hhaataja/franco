@@ -158,6 +158,7 @@ var WorkoutSetDescription = React.createClass({
 
     render: function() {
 
+        // TODO: These should be somehow configurable
         var labelTypes = { '0': "label-danger",
                            '1': "label-danger",
                            '2': "label-danger",
@@ -167,11 +168,20 @@ var WorkoutSetDescription = React.createClass({
                          };
         
         var sets = '';
+
+        var defaultLabelType = "label-success";
         
         if (this.props.sets !== '') {
             sets = this.props.sets.split('').map(function(repCount) {
-                var labelType = 'label ' + labelTypes[repCount];
-                return <span className={labelType}>{repCount}</span>
+                var labelType = defaultLabelType;
+                if (_.has(labelTypes, repCount)) {
+                    labelType = labelTypes[repCount];
+                }
+                var classValue = 'label ' + labelType;
+
+                // parse single digit hex repcounts: support up to 16
+                // rep sets
+                return <span className={classValue}>{parseInt(repCount,16)}</span>
             });
         }
 
