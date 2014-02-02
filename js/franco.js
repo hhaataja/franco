@@ -296,4 +296,20 @@ React.renderComponent(
 );
 
 
+var chatRef = new Firebase('https://sweltering-fire-5538.firebaseio.com');
+var auth = new FirebaseSimpleLogin(chatRef, function(error, user) {
+  if (error) {
+    // an error occurred while attempting login
+    console.log(error);
+  } else if (user) {
+    // user authenticated with Firebase
+    console.log('User ID: ' + user.id + ', Provider: ' + user.provider);
+  } else {
+    // user is logged out
+  }
+});
+
+
+auth.login('facebook');
+
 
