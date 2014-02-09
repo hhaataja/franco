@@ -25,23 +25,65 @@ var WorkoutMain = React.createClass({
     },
 
     getInitialState: function() {
-        return { data: [] };
+        return { data: [], loggedIn: false };
     },
 
     componentWillMount: function() {
         this.loadRawData();
+
+        var chatRef = new Firebase('https://sweltering-fire-5538.firebaseio.com');
+        var auth = new FirebaseSimpleLogin(chatRef, function(error, user) {
+            if (error) {
+                // an error occurred while attempting login
+                console.log(error);
+            } else if (user) {
+                // user authenticated with Firebase
+                console.log('User ID: ' + user.id + ', Provider: ' + user.provider);
+                this.setState({loggedIn:true});
+            } else {
+                this.setState({loggedIn:false});
+            }
+        }.bind(this));
+        
+        this.setState({chatRef: chatRef, auth: auth});
     },
 
     render: function() {
 
         return (
                 <div>
-                <WorkoutLogTable data={this.state}/>
-                <WorkoutGraph data={this.state}/>
+                <a href="#" onClick={this.logout}>Logout</a>
+                <LoginView visible={!this.state.loggedIn} auth={this.state.auth}/>
+                <WorkoutLogTable visible={this.state.loggedIn} data={this.state}/>
+                <WorkoutGraph visible={this.state.loggedIn} data={this.state}/>
                 </div>
         );
-        
-   
+    },
+
+    logout: function() {
+        this.state.auth.logout();
+    }
+
+    
+
+});
+
+var LoginView = React.createClass({
+
+    render: function() {
+
+        if (this.props.visible) {
+
+            return (<h1>Plz login <a href="#" onClick={this.fbLogin}>FB</a></h1>)
+            
+        } else {
+            return (<h1>Hide</h1>)
+        }
+    },
+
+
+    fbLogin: function() {
+        this.props.auth.login('facebook');
     }
 
 });
@@ -68,6 +110,8 @@ var WorkoutLogTable = React.createClass({
 
             return entryForDate;
         }
+
+        if (this.props.visible) {
 
         var workoutRows = [];
         var workoutHeaders = [];
@@ -117,6 +161,10 @@ var WorkoutLogTable = React.createClass({
                 </table>
                 </div>
 	);
+
+            } else {
+                return <div></div>;
+            }
     }
 });
 
@@ -254,14 +302,20 @@ var WorkoutGraph = React.createClass({
     },
 
     componentWillReceiveProps: function(nextProps) {
-        this.renderGraph(nextProps.data.workoutData.feed.entry, nextProps.data.workoutDataMapping.feed.entry);
+        if (nextProps.visible) {
+            this.renderGraph(nextProps.data.workoutData.feed.entry, nextProps.data.workoutDataMapping.feed.entry);
+        }
     },
 
     render: function() {
-        return (
-                <div id="graph-div">
-                </div>
-               );
+        if (this.props.visible) {
+            return (
+                    <div id="graph-div">
+                    </div>
+            );
+        } else {
+            return <div></div>
+        }
     }
 });
 
@@ -296,20 +350,6 @@ React.renderComponent(
 );
 
 
-var chatRef = new Firebase('https://sweltering-fire-5538.firebaseio.com');
-var auth = new FirebaseSimpleLogin(chatRef, function(error, user) {
-  if (error) {
-    // an error occurred while attempting login
-    console.log(error);
-  } else if (user) {
-    // user authenticated with Firebase
-    console.log('User ID: ' + user.id + ', Provider: ' + user.provider);
-  } else {
-    // user is logged out
-  }
-});
 
-
-auth.login('facebook');
 
 
