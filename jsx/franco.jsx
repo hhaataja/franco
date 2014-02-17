@@ -4,7 +4,24 @@
 
 var WorkoutMain = React.createClass({
 
-    loadRawData: function() {
+    __firebaseBaseUrl: 'https://sweltering-fire-5538.firebaseio.com',
+
+    loadRawData: function(user) {
+        console.log("Let's load data for user " + user.uid);
+        
+        var firebaseRef = new Firebase(this.__firebaseBaseUrl + "/users/" + user.uid);
+        
+        
+        firebaseRef.once('value', function(dataSnapshot) {
+            if (dataSnapshot.hasChild('workoutUrl')) {
+                console.log("Found existing user with workoutUrl " + dataSnapshot.child('workoutUrl').val());
+            } else {
+                console.log("New user, need to ask and persist workoutUrl");
+                firebaseRef.set({workoutUrl: 'testing'});
+            }
+
+        });
+        
 
         var rawWorkoutData;
         var workoutDataMapping;
@@ -29,8 +46,6 @@ var WorkoutMain = React.createClass({
     },
 
     componentWillMount: function() {
-        this.loadRawData();
-
         var chatRef = new Firebase('https://sweltering-fire-5538.firebaseio.com');
         var auth = new FirebaseSimpleLogin(chatRef, function(error, user) {
             if (error) {
@@ -39,7 +54,8 @@ var WorkoutMain = React.createClass({
             } else if (user) {
                 // user authenticated with Firebase
                 console.log('User ID: ' + user.id + ', Provider: ' + user.provider);
-                this.setState({loggedIn:true});
+                this.setState({loggedIn:true, user: user});
+                this.loadRawData(user);
             } else {
                 this.setState({loggedIn:false});
             }
@@ -53,7 +69,7 @@ var WorkoutMain = React.createClass({
         return (
                 <div>
                 <a href="#" onClick={this.logout}>Logout</a>
-                <LoginView visible={!this.state.loggedIn} auth={this.state.auth}/>
+                <LoginView visible={!this.state.loggedIn} auth={this.state.auth} user={this.state.user}/>
                 <WorkoutLogTable visible={this.state.loggedIn} data={this.state}/>
                 <WorkoutGraph visible={this.state.loggedIn} data={this.state}/>
                 </div>
@@ -77,7 +93,7 @@ var LoginView = React.createClass({
             return (<h1>Plz login <a href="#" onClick={this.fbLogin}>FB</a></h1>)
             
         } else {
-            return (<h1>Hide</h1>)
+            return (<h1>Moi {this.props.user.displayName}</h1>)
         }
     },
 
@@ -297,13 +313,21 @@ var WorkoutGraph = React.createClass({
         }
     },
 
+    __destroyGraph: function() {
+        var chart = $(this.getDOMNode()).highcharts(); 
+        if (chart) { chart.destroy(); }
+    },
+
     componentDidMount: function() {
 
     },
 
     componentWillReceiveProps: function(nextProps) {
-        if (nextProps.visible) {
+        if (nextProps.visible && nextProps.data.workoutData) {
             this.renderGraph(nextProps.data.workoutData.feed.entry, nextProps.data.workoutDataMapping.feed.entry);
+        } else {
+            console.log("Destroying graph");
+            this.__destroyGraph();
         }
     },
 

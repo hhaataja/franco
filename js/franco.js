@@ -4,7 +4,24 @@
 
 var WorkoutMain = React.createClass({displayName: 'WorkoutMain',
 
-    loadRawData: function() {
+    __firebaseBaseUrl: 'https://sweltering-fire-5538.firebaseio.com',
+
+    loadRawData: function(user) {
+        console.log("Let's load data for user " + user.uid);
+        
+        var firebaseRef = new Firebase(this.__firebaseBaseUrl + "/users/" + user.uid);
+        
+        
+        firebaseRef.once('value', function(dataSnapshot) {
+            if (dataSnapshot.hasChild('workoutUrl')) {
+                console.log("Found existing user with workoutUrl " + dataSnapshot.child('workoutUrl').val());
+            } else {
+                console.log("New user, need to ask and persist workoutUrl");
+                firebaseRef.set({workoutUrl: 'testing'});
+            }
+
+        });
+        
 
         var rawWorkoutData;
         var workoutDataMapping;
@@ -29,8 +46,6 @@ var WorkoutMain = React.createClass({displayName: 'WorkoutMain',
     },
 
     componentWillMount: function() {
-        this.loadRawData();
-
         var chatRef = new Firebase('https://sweltering-fire-5538.firebaseio.com');
         var auth = new FirebaseSimpleLogin(chatRef, function(error, user) {
             if (error) {
@@ -39,7 +54,8 @@ var WorkoutMain = React.createClass({displayName: 'WorkoutMain',
             } else if (user) {
                 // user authenticated with Firebase
                 console.log('User ID: ' + user.id + ', Provider: ' + user.provider);
-                this.setState({loggedIn:true});
+                this.setState({loggedIn:true, user: user});
+                this.loadRawData(user);
             } else {
                 this.setState({loggedIn:false});
             }
@@ -53,7 +69,7 @@ var WorkoutMain = React.createClass({displayName: 'WorkoutMain',
         return (
                 React.DOM.div(null, 
                 React.DOM.a( {href:"#", onClick:this.logout}, "Logout"),
-                LoginView( {visible:!this.state.loggedIn, auth:this.state.auth}),
+                LoginView( {visible:!this.state.loggedIn, auth:this.state.auth, user:this.state.user}),
                 WorkoutLogTable( {visible:this.state.loggedIn, data:this.state}),
                 WorkoutGraph( {visible:this.state.loggedIn, data:this.state})
                 )
@@ -77,7 +93,7 @@ var LoginView = React.createClass({displayName: 'LoginView',
             return (React.DOM.h1(null, "Plz login ", React.DOM.a( {href:"#", onClick:this.fbLogin}, "FB")))
             
         } else {
-            return (React.DOM.h1(null, "Hide"))
+            return (React.DOM.h1(null, "Moi ", this.props.user.displayName))
         }
     },
 
@@ -297,13 +313,21 @@ var WorkoutGraph = React.createClass({displayName: 'WorkoutGraph',
         }
     },
 
+    __destroyGraph: function() {
+        var chart = $(this.getDOMNode()).highcharts(); 
+        if (chart) { chart.destroy(); }
+    },
+
     componentDidMount: function() {
 
     },
 
     componentWillReceiveProps: function(nextProps) {
-        if (nextProps.visible) {
+        if (nextProps.visible && nextProps.data.workoutData) {
             this.renderGraph(nextProps.data.workoutData.feed.entry, nextProps.data.workoutDataMapping.feed.entry);
+        } else {
+            console.log("Destroying graph");
+            this.__destroyGraph();
         }
     },
 
