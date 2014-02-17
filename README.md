@@ -8,7 +8,8 @@ TODO:
 - Usage instructions
 - Some sort of user accounts, backed by Firebase or similar
   - ~~Firebase account setup~~
-  - Show the table & data only after logging in
+  - ~~Show the table & data only after logging in~~
+  - Load the table using the URL stored in Firebase
   - Allow logged in user to save the sheet url, load data from that url 
 
 - Comparing own results with other user's results
