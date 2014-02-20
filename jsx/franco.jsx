@@ -8,37 +8,51 @@ var WorkoutMain = React.createClass({
 
     loadRawData: function(user) {
         console.log("Let's load data for user " + user.uid);
-        
+    
+        var sheetUrlTemplate = "https://spreadsheets.google.com/feeds/list/%KEY%/%SHEET%/public/values?alt=json";
+
+
+    
         var firebaseRef = new Firebase(this.__firebaseBaseUrl + "/users/" + user.uid);
         
-        
         firebaseRef.once('value', function(dataSnapshot) {
-            if (dataSnapshot.hasChild('workoutUrl')) {
-                console.log("Found existing user with workoutUrl " + dataSnapshot.child('workoutUrl').val());
+            
+            // TODO: to own function
+            if (dataSnapshot.hasChild('docKey') && 
+                dataSnapshot.hasChild('dataSheetId') && 
+                dataSnapshot.hasChild('mappingSheetId')) {
+
+                var docKey = dataSnapshot.child('docKey').val();
+                var dataSheetId = dataSnapshot.child('dataSheetId').val();
+                var mappingSheetId = dataSnapshot.child('mappingSheetId').val();
+
+                var workoutDataUrl = sheetUrlTemplate.replace(/%KEY%/, docKey);
+                workoutDataUrl = workoutDataUrl.replace(/%SHEET%/, dataSheetId);
+                
+                var dataMappingUrl = sheetUrlTemplate.replace(/%KEY%/, docKey);
+                dataMappingUrl = dataMappingUrl.replace(/%SHEET%/, mappingSheetId);
+
+                $.when(getData(workoutDataUrl), getData(dataMappingUrl))
+                    .done(function(workoutDataResponse, workoutDataMappingResponse) {
+
+                        this.setState({workoutData: workoutDataResponse[0], 
+                                       workoutDataMapping: workoutDataMappingResponse[0]});
+                        
+                    }.bind(this));
+
+                function getData(url) {
+                    return $.ajax({
+                        url: url
+                    });
+                }
+
             } else {
-                console.log("New user, need to ask and persist workoutUrl");
-                firebaseRef.set({workoutUrl: 'testing'});
+                alert("No docKey nor sheet ids found");
             }
 
-        });
+        }.bind(this));
         
 
-        var rawWorkoutData;
-        var workoutDataMapping;
-
-        $.when(getData(this.props.workoutUrl), getData(this.props.workoutMappingUrl))
-            .done(function(workoutDataResponse, workoutDataMappingResponse) {
-
-                this.setState({workoutData: workoutDataResponse[0], 
-                               workoutDataMapping: workoutDataMappingResponse[0]});
-
-            }.bind(this));
-
-        function getData(url) {
-            return $.ajax({
-                url: url
-            });
-        }
     },
 
     getInitialState: function() {
@@ -355,21 +369,10 @@ var oGetVars = new (function (sSearch) {
 
 // alert(oGetVars.sheet);
 
-var sheetUrlTemplate = "https://spreadsheets.google.com/feeds/list/%KEY%/%SHEET%/public/values?alt=json";
-
-var sheetKey = oGetVars.sheetKey || "0AtPKdBzGwWLwdFFsMHZkSzQ1SnJ3RTdQS0N3c2lrTWc";
-var workoutDataSheetId = oGetVars.dataSheetId || "od6";
-var dataMappingSheetId = oGetVars.mappingSheetId || "od7";
-
-var workoutDataUrl = sheetUrlTemplate.replace(/%KEY%/, sheetKey);
-workoutDataUrl = workoutDataUrl.replace(/%SHEET%/, workoutDataSheetId);
-
-var dataMappingUrl = sheetUrlTemplate.replace(/%KEY%/, sheetKey);
-dataMappingUrl = dataMappingUrl.replace(/%SHEET%/, dataMappingSheetId);
 
 
 React.renderComponent(
-        <WorkoutMain workoutUrl={workoutDataUrl} workoutMappingUrl={dataMappingUrl}/>,
+        <WorkoutMain/>,
     document.getElementById('content')
 );
 
